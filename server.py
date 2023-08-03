@@ -11,5 +11,6 @@ my_other_socks.bind((MY_IP, PORT))
 while 1:
     data, addr = my_other_socks.recvfrom(1024)
     print(data)
-    print(addr)
+    #print(addr)
+
     time.sleep(1)
