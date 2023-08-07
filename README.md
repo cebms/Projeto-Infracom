@@ -11,11 +11,11 @@ Projeto da disciplina de Infraestrutura de Comunicação, que consiste em um cha
 
 3. Execute o servidor UDP digitando o seguinte comando no terminal:
 
-        python server.py
+        python3 server.py
 
 4. Em seguida, ainda na pasta src do projeto, execute o cliente UDP digitando o seguinte comando no terminal:
 
-        python client.py
+        python3 client.py
 
 ## Funcionamento
 
