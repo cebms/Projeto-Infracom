@@ -6,11 +6,14 @@ Projeto da disciplina de Infraestrutura de Comunicação, que consiste em um cha
 
 1. Certifique-se de ter o Python instalado em sua máquina.
 2. Abra o terminal ou prompt de comando e navegue até a pasta src do projeto.
+
+        cd src
+
 3. Execute o servidor UDP digitando o seguinte comando no terminal:
 
         python server.py
 
-4. Em seguida, ainda na pasta src do projeto. Execute o cliente UDP digitando o seguinte comando no terminal:
+4. Em seguida, ainda na pasta src do projeto, execute o cliente UDP digitando o seguinte comando no terminal:
 
         python client.py
 
