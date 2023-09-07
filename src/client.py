@@ -4,13 +4,12 @@ import time
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 6969
 
-client = UDP()
+client = rdt3_sender()
 
 # Altere aqui o arquivo que deseja enviar
 file_name = 'imageToSend.jpeg' 
-# file_name = 'file.txt'
 
-client.send_file('../client/' + file_name, (SERVER_IP, SERVER_PORT))
+client.rdt_send('../client/' + file_name, (SERVER_IP, SERVER_PORT))
 
 time.sleep(1)
 data, _ = client.recv_file()
