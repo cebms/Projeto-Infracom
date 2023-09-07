@@ -1,19 +1,26 @@
 from utils import *
 import time
+import sys
+import os
 
 SERVER_IP = '127.0.0.1'
 SERVER_PORT = 6969
 
-client = rdt3_sender()
+args = sys.argv
+
+if len(args) < 2:
+  print('Pass the name of the file to send on command line')
 
 # Altere aqui o arquivo que deseja enviar
-file_name = 'imageToSend.jpeg' 
+file_name = args[1]
 
-client.rdt_send('../client/' + file_name, (SERVER_IP, SERVER_PORT))
+client = Rdt3()
 
-time.sleep(1)
-data, _ = client.recv_file()
-if len(data) != 0:
-  fd = open('../client/receivedFiles/' + file_name, 'wb')
-  fd.write(data)
-  fd.close()
+client.rdt_send(os.path.join('../client', file_name), (SERVER_IP, SERVER_PORT))
+
+# time.sleep(1)
+# data, _ = client.recv_file()
+# if len(data) != 0:
+#   fd = open('../client/receivedFiles/' + file_name, 'wb')
+#   fd.write(data)
+#   fd.close()
