@@ -17,6 +17,10 @@ file_name = args[1]
 client = Rdt3()
 
 client.rdt_send(os.path.join('../client', file_name), (SERVER_IP, SERVER_PORT))
+print('arquivo enviado com sucesso')
+
+with open(('../client/receivedFiles/' + file_name), 'wb') as fd:
+  client.rdt_recv(fd)
 
 # time.sleep(1)
 # data, _ = client.recv_file()

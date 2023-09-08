@@ -1,6 +1,7 @@
 import socket as sck
 import random as rnd
 
+
 class UDP:
 
   def __init__(self, addr=None):
@@ -8,9 +9,9 @@ class UDP:
     if addr != None:
       self.socks.bind(addr)
 
-  def recv_data(self, recv_prob = 0.8):
+  def recv_data(self, recv_prob=0.8):
     random = 1.0
-    while random > recv_prob: #simulating packet miss
+    while random > recv_prob:  #simulating packet miss
       data, addr = self.socks.recvfrom(1024)
       random = rnd.random()
     return data, addr
@@ -42,6 +43,7 @@ class Rdt3:
 
   def rdt_send(self, file_name, addr):
     latest_packet = bytes()
+    ret_count = 0
     with open(file_name, 'rb') as file:
       while True:
         if self.stateSend == 0 or self.stateSend == 2:
@@ -57,6 +59,7 @@ class Rdt3:
           #start timer
           self.udp.start_timer(self.TIMEOUT_INTERVAL)
           self.stateSend += 1
+          ret_count = 0
 
         else:
           #if timeout, send again and restart timer
@@ -70,12 +73,16 @@ class Rdt3:
               print('ACK ' + str(id) + ' recebido')
               self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
               if not len(latest_packet):  #end of file
+                self.udp.start_timer(None)
                 break
           except sck.timeout:
             #envia o pacote de novo
+            if ret_count > 10:  #ultimo ack perdido
+              break
             self.udp.send_data(latest_packet, id, addr)
             print('Temporizador estorou!\nRetransmitindo ' + str(id))
             self.udp.start_timer(self.TIMEOUT_INTERVAL)
+            ret_count += 1
           #if received ack, and is the one expected, stop timer and go to stateSend 2
 
   def rdt_recv(self, destination):
@@ -83,6 +90,11 @@ class Rdt3:
     WAIT1 = 1
     while True:
       rcvpkt, ret_addr = self.udp.recv_data()
+
+      if self.isEOF(rcvpkt):
+        return ret_addr
+        break
+
       if self.stateRecv == WAIT0:
         if self.isId(rcvpkt, 0):
           print("pacote 0 recebido\nACK 0 enviado")
@@ -101,6 +113,3 @@ class Rdt3:
         else:
           self.udp.send_data(bytes(), seq_num=0, addr=ret_addr)
           print('ACK 0 enviado')
-
-      if self.isEOF(rcvpkt):
-        break
