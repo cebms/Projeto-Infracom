@@ -1,7 +1,6 @@
 import socket as sck
 import random as rnd
 
-
 class UDP:
 
   def __init__(self, addr=None):
@@ -12,6 +11,7 @@ class UDP:
   def recv_data(self, recv_prob=0.8):
     random = 1.0
     while random > recv_prob:  #simulating packet miss
+      print('esperando pacote')
       data, addr = self.socks.recvfrom(1024)
       random = rnd.random()
     return data, addr
@@ -35,8 +35,8 @@ class Rdt3:
     self.TIMEOUT_INTERVAL = 1  #time in seconds
     self.udp = UDP(addr)
 
-  def isId(self, rcvpkt, ack):
-    return (rcvpkt[0] % 2 == ack)
+  def isId(self, rcvpkt, id):
+    return (rcvpkt[0] % 2 == id)
 
   def isEOF(self, rcvpkt):
     return rcvpkt[0] >= 2
@@ -77,9 +77,9 @@ class Rdt3:
                 break
           except sck.timeout:
             #envia o pacote de novo
-            if ret_count > 10:  #ultimo ack perdido
+            if ret_count > 5:  #ultimo ack perdido
               break
-            self.udp.send_data(latest_packet, id, addr)
+            self.udp.send_data(latest_packet, id, addr, eof=0 if len(latest_packet) else 1)
             print('Temporizador estorou!\nRetransmitindo ' + str(id))
             self.udp.start_timer(self.TIMEOUT_INTERVAL)
             ret_count += 1
@@ -90,6 +90,13 @@ class Rdt3:
     WAIT1 = 1
     while True:
       rcvpkt, ret_addr = self.udp.recv_data()
+
+      if len(rcvpkt) > 10:
+        print(rcvpkt[:10])
+        print(len(rcvpkt))
+      else:
+        print(rcvpkt)
+        print(len(rcvpkt))
 
       if self.isEOF(rcvpkt):
         return ret_addr

@@ -11,12 +11,6 @@ with open('../server/received_file', 'wb') as file:
   print('arquivo recebido com sucesso')
 
 print("Transmitindo de volta para ", ret_addr)
+
 rdt.rdt_send('../server/received_file', ret_addr)
-#while True:
-#  print("Waiting for files...")
-#  data, ret_addr = server.data()
-#  if len(data) != 0:
-#    fd = open('../server/received_file', 'wb')
-#    fd.write(data)
-#    fd.close()
-#    server.send_file('../server/received_file', ret_addr)
+print('arquivo transmitido com sucesso')
