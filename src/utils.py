@@ -8,10 +8,9 @@ class UDP:
     if addr != None:
       self.socks.bind(addr)
 
-  def recv_data(self, recv_prob=0.8):
+  def recv_data(self, recv_prob=0.9):
     random = 1.0
     while random > recv_prob:  #simulating packet miss
-      print('esperando pacote')
       data, addr = self.socks.recvfrom(1024)
       random = rnd.random()
     return data, addr
@@ -78,8 +77,13 @@ class Rdt3:
           except sck.timeout:
             #envia o pacote de novo
             if ret_count > 5:  #ultimo ack perdido
+              print('Muitas retransmissoes, encerrando conexao!')
+              self.udp.start_timer(None)
               break
-            self.udp.send_data(latest_packet, id, addr, eof=0 if len(latest_packet) else 1)
+            self.udp.send_data(latest_packet,
+                               id,
+                               addr,
+                               eof=0 if len(latest_packet) else 1)
             print('Temporizador estorou!\nRetransmitindo ' + str(id))
             self.udp.start_timer(self.TIMEOUT_INTERVAL)
             ret_count += 1
@@ -91,18 +95,8 @@ class Rdt3:
     while True:
       rcvpkt, ret_addr = self.udp.recv_data()
 
-      if len(rcvpkt) > 10:
-        print(rcvpkt[:10])
-        print(len(rcvpkt))
-      else:
-        print(rcvpkt)
-        print(len(rcvpkt))
-
-      if self.isEOF(rcvpkt):
-        return ret_addr
-        break
-
       if self.stateRecv == WAIT0:
+        print('Receiver state: ' + str(self.stateRecv))
         if self.isId(rcvpkt, 0):
           print("pacote 0 recebido\nACK 0 enviado")
           destination.write(rcvpkt[1:])
@@ -112,6 +106,7 @@ class Rdt3:
           self.udp.send_data(bytes(), seq_num=1, addr=ret_addr)
           print('ACK 1 enviado')
       elif self.stateRecv == WAIT1:
+        print('Receiver state: ' + str(self.stateRecv))
         if self.isId(rcvpkt, 1):
           print("pacote 1 recebido\nACK 1 enviado")
           destination.write(rcvpkt[1:])
@@ -120,3 +115,7 @@ class Rdt3:
         else:
           self.udp.send_data(bytes(), seq_num=0, addr=ret_addr)
           print('ACK 0 enviado')
+
+      if self.isEOF(rcvpkt):
+        return ret_addr
+        break

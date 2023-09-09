@@ -13,12 +13,19 @@ Projeto da disciplina de Infraestrutura de Comunicação, que consiste em um cha
 
         python3 server.py
 
-4. Em seguida, ainda na pasta src do projeto, execute o cliente UDP digitando o seguinte comando no terminal:
+4. Em seguida, ainda na pasta src do projeto, execute o cliente UDP e o arquivo escolhido para enviar que pode ser a imagem ou o texto, digitando o seguinte comando no terminal:
 
-        python3 client.py
+        para o txt: python3 client.py fileToSend.txt
+        para o jpeg: python3 client.py imageToSend.jpeg
 
 ## Funcionamento
 
 O servidor roda em loop aguardando pacotes de até 1024 bytes enviados pelos clientes. Quando recebe um pacote do cliente, ele salva as informações na pasta "server" e, em seguida, envia esse arquivo de volta ao cliente. O cliente, por sua vez, salva o novo arquivo na pasta "client/receivedFiles".
 
-Para escolher qual arquivo será enviado ao servidor, você pode editar a linha 9 do arquivo "src/client.py" e alterar o caminho para o arquivo desejado.
+## Gerador de Perda de Pacotes
+
+Foi assumido uma probabilidade fixa de 10% para o descarte de pacotes, simulando a perda real na rede.
+
+## Fim de Comunicação
+
+Além disso, situações onde o transmissor retransmite diversas vezes seguidas sem receber uma resposta do receptor ocasionarão no fim da comunicação, assume-se que todos os pacote foram transmitidos corretamente e o receptor fechou sua conexão.
