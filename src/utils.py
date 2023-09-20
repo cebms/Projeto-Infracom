@@ -8,9 +8,9 @@ class UDP:
     if addr != None:
       self.socks.bind(addr)
 
-  def recv_data(self, recv_prob=0.9):
+  def recv_data(self, recv_prob=1.0):
     random = 1.0
-    while random > recv_prob:  #simulating packet miss
+    while random >= recv_prob:  #simulating packet miss
       data, addr = self.socks.recvfrom(1024)
       random = rnd.random()
     return data, addr
@@ -46,13 +46,13 @@ class Rdt3:
     with open(file_name, 'rb') as file:
       while True:
         if self.stateSend == 0 or self.stateSend == 2:
-          print('Transmissor state: ' + str(self.stateSend))
+          #print('Transmissor state: ' + str(self.stateSend))
           #create packet (if remaining data)
           data = file.read(1023)
           latest_packet = data
           #send packet
           id = 0 if self.stateSend == 0 else 1
-          print('Enviando pacote ' + str(id))
+          #print('Enviando pacote ' + str(id))
 
           self.udp.send_data(data, id, addr, eof=0 if len(data) else 1)
           #start timer
@@ -64,12 +64,12 @@ class Rdt3:
           #if timeout, send again and restart timer
           id = 0 if self.stateSend == 1 else 1
           #if received ack, but not the one expected, ignore
-          print('Transmissor state: ' + str(self.stateSend))
+          #print('Transmissor state: ' + str(self.stateSend))
           try:
             #espera o ack
             recvpkt, ret_addr = self.udp.recv_data()
             if self.isId(recvpkt, id):
-              print('ACK ' + str(id) + ' recebido')
+              #print('ACK ' + str(id) + ' recebido')
               self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
               if not len(latest_packet):  #end of file
                 self.udp.start_timer(None)
@@ -77,14 +77,14 @@ class Rdt3:
           except sck.timeout:
             #envia o pacote de novo
             if ret_count > 5:  #ultimo ack perdido
-              print('Muitas retransmissoes, encerrando conexao!')
+              #print('Muitas retransmissoes, encerrando conexao!')
               self.udp.start_timer(None)
               break
             self.udp.send_data(latest_packet,
                                id,
                                addr,
                                eof=0 if len(latest_packet) else 1)
-            print('Temporizador estorou!\nRetransmitindo ' + str(id))
+            #print('Temporizador estorou!\nRetransmitindo ' + str(id))
             self.udp.start_timer(self.TIMEOUT_INTERVAL)
             ret_count += 1
           #if received ack, and is the one expected, stop timer and go to stateSend 2
@@ -96,25 +96,25 @@ class Rdt3:
       rcvpkt, ret_addr = self.udp.recv_data()
 
       if self.stateRecv == WAIT0:
-        print('Receiver state: ' + str(self.stateRecv))
+        #print('Receiver state: ' + str(self.stateRecv))
         if self.isId(rcvpkt, 0):
-          print("pacote 0 recebido\nACK 0 enviado")
+          #print("pacote 0 recebido\nACK 0 enviado")
           destination.write(rcvpkt[1:])
           self.udp.send_data(bytes(), seq_num=0, addr=ret_addr)
           self.stateRecv = WAIT1
         else:
           self.udp.send_data(bytes(), seq_num=1, addr=ret_addr)
-          print('ACK 1 enviado')
+          #print('ACK 1 enviado')
       elif self.stateRecv == WAIT1:
-        print('Receiver state: ' + str(self.stateRecv))
+        #print('Receiver state: ' + str(self.stateRecv))
         if self.isId(rcvpkt, 1):
-          print("pacote 1 recebido\nACK 1 enviado")
+          #print("pacote 1 recebido\nACK 1 enviado")
           destination.write(rcvpkt[1:])
           self.udp.send_data(bytes(), seq_num=1, addr=ret_addr)
           self.stateRecv = WAIT0
         else:
           self.udp.send_data(bytes(), seq_num=0, addr=ret_addr)
-          print('ACK 0 enviado')
+          #print('ACK 0 enviado')
 
       if self.isEOF(rcvpkt):
         return ret_addr
