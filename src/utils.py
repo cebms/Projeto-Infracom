@@ -1,5 +1,7 @@
 import socket as sck
 import random as rnd
+import datetime
+import copy
 
 class UDP:
 
@@ -119,3 +121,48 @@ class Rdt3:
       if self.isEOF(rcvpkt):
         return ret_addr
         break
+
+
+class User:
+
+  def __init__(self, name, IP, port):
+    self.IP = IP
+    self.port = port
+    self.name = name
+    self.friends = []
+
+  def addFriend(self, user):
+    self.friends.append(copy.deepcopy(user))
+
+  def removeFriend(self, user):
+    friends_copy = self.friends[:]
+    for classUser in friends_copy:
+      if user.name == classUser.name:
+        self.friends.remove(classUser)
+
+
+class Message:
+
+  def __init__(self, user, text=""):
+    self.user = user
+    self.text = text
+    self.time = datetime.datetime.now().strftime("%H:%M:%S %d/%m/%Y")
+
+  def show(self):
+    print(self.user.IP + ':' + str(self.user.port) + '/~' + self.user.name +
+          ': ' + self.text + ' ' + self.time)
+
+
+# Para printar a messagem em vermelho
+def print_vermelho(texto):
+  print("\033[91m" + texto + "\033[0m")
+
+
+# Para printar a messagem em verde
+def print_verde(texto):
+  print("\033[92m" + texto + "\033[0m")
+
+
+# Para printar a messagem em amarelo
+def print_amarelo(texto):
+  print("\033[93m" + texto + "\033[0m")
