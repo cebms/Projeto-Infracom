@@ -91,10 +91,11 @@ class Rdt3:
             ret_count += 1
           #if received ack, and is the one expected, stop timer and go to stateSend 2
 
-  def rdt_recv(self, destination):
+  def rdt_recv(self, destination, waitTime = None):
     WAIT0 = 0
     WAIT1 = 1
     while True:
+      self.udp.start_timer(waitTime)
       rcvpkt, ret_addr = self.udp.recv_data()
 
       if self.stateRecv == WAIT0:

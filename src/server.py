@@ -12,7 +12,7 @@ class Server:
   def __init__(self, IP, port):
     self.IP = IP
     self.port = port
-    #self.rdt = Rdt3((self.IP, self.port))
+    self.rdt = Rdt3((self.IP, self.port))
     self.users = []
     self.messages = []
     self.commands = {
@@ -135,13 +135,21 @@ class Server:
 # instanciacao do server
 server = Server('127.0.0.1', 6969)
 
-socks = sck.socket(sck.AF_INET, sck.SOCK_DGRAM)
-socks.bind(('127.0.0.1', 6969))
+# socks = sck.socket(sck.AF_INET, sck.SOCK_DGRAM)
+# socks.bind(('127.0.0.1', 6969))
 
 while True:
-  data, addr = socks.recvfrom(1024)
-  print(data.decode())
-  server.processCommand(data.decode())
+  # data, addr = socks.recvfrom(1024)
+  # print(data.decode())
+  with open('../server/tmpFile', 'w+b') as fd:
+    ret_addr = server.rdt.rdt_recv(fd)
+    fd.seek(0)
+    message = fd.read().decode()
+    print(message)
+    server.processCommand(message)
+
+  #sending back the message to client
+  server.rdt.rdt_send('../server/tmpFile', ret_addr)
 
 # validacao de comandos
 # server.processCommand('/hello thiago 127.0.0.1 6968')
