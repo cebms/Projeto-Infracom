@@ -32,10 +32,8 @@ class Client:
     # packet = message.encode()
     # print(packet)
     # self.socks.sendto(packet, (self.SERVER_IP, self.SERVER_PORT))
-    with open('../client/tmpToSend', 'wb') as fd:
-      fd.write(message.encode())
     self.lock.acquire()
-    self.rdt.rdt_send('../client/tmpToSend', (self.SERVER_IP, self.SERVER_PORT))
+    self.rdt.rdt_sendBytes(message.encode(), (self.SERVER_IP, self.SERVER_PORT))
     self.lock.release()
 
   def processCommand(self, command):
@@ -80,6 +78,8 @@ class Client:
   def run(self):
     # Get user input from the keyboard
     user_input = input()
+    if len(user_input) == 0:
+      return True
     print('\033[1A' + '\033[2K', end='')
     print('Waiting for server...')
     print('\033[1A' + '\033[2D', end='')

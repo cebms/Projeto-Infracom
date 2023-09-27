@@ -30,39 +30,35 @@ class Server:
       message.show()
 
   def listUsers(self, *args):
-    usernamesList = []
+    usernamesList = ''
     for user in self.users.values():
       print(user)
-      usernamesList.append(user)
+      usernamesList += user + '\n'
 
-    return usernamesList
+    #sending as runtimeError to send exclusivelly to the person who typed the command
+    #fix it.
+    raise RuntimeError(usernamesList)
 
   def disconnectUser(self, *args):
     userAddr = args[0]
 
-    if userAddr in self.users:
-      name = self.users[userAddr]
-      print('User ' + name + ' disconnected')
-      message = '{} {} {} disconected.'.format(userAddr[0], userAddr[1], name)
+    name = self.users[userAddr]
+    print('User ' + name + ' disconnected')
+    message = '{} {} {} disconected.'.format(userAddr[0], userAddr[1], name)
 
-      ### sending the end of conection to the one who requested it
-      with open('../server/tmpFile', 'w+b') as fd:
-        fd.write(message.encode())
-      self.rdt.rdt_send('../server/tmpFile', userAddr)
+    ### sending the end of conection to the one who requested it
+    self.rdt.rdt_sendBytes(message.encode(), userAddr)
 
-      self.users.pop(userAddr)
-      return message
-    else:
-      print('User was not logged in')
-      return None
+    self.users.pop(userAddr)
+    return message
 
   def connectUser(self, *args):
     name = args[0][0]
     userAddr = args[1]
 
     if userAddr in self.users.keys():
-      print("User " + name + " Already Logged!")
-      return None
+      print("User " + self.users[userAddr] + " already logged!")
+      raise RuntimeError("You already has an account logged in")
     else:
       if name not in self.users.values():
         print("User " + name + " logged in!")
@@ -70,7 +66,7 @@ class Server:
         return random.sample(greetings, 1)[0].format(userAddr[0], userAddr[1], name)
       else:
         print('Someone already has this name')
-        return None
+        raise RuntimeError("Someone is using this name, try another")
 
   def banUser(self, *args):
     pass
@@ -91,13 +87,19 @@ class Server:
       return '{} {} {}: {}'.format(userAddr[0], userAddr[1], name, message)
     else:
       print('Someone that is not logged in sent a message')
-      return None
+      raise RuntimeError("You should log in before send messages, try: /hello <your_name>")
 
   def runCommand(self, command, text, retAddr):
-    if command not in self.commands:
+    #if not logged you cannot execute a command
+    if retAddr not in self.users and command != '/hello':
+      raise RuntimeError("You aren't online, try login with: /hello <your_name>")
+
+    #a command that does not exist
+    elif command not in self.commands:
       print('Command does not exist')
       # return self.getMessage(text, retAddr) #if dont exist, it's a message!
-      return None
+      raise RuntimeError("Did you tried to type a command? that is the list you can use: {}".format(self.commands.keys()))
+
     method = self.commands[command]
     return method(text, retAddr)
 
@@ -124,20 +126,13 @@ while True:
     ret_addr = server.rdt.rdt_recv(fd)
     fd.seek(0)
     message = fd.read().decode()
-    #print(message)
-  messageBack = server.processCommand(message, ret_addr)
 
-  #sending back the message to client
-  fd = open('../server/tmpFile', 'wb')
-  if messageBack == None:
-    fd.write('Bad Request, try again'.encode())
-    fd.close()
-    server.rdt.rdt_send('../server/tmpFile', ret_addr) #sending to just one client, that sent somthing wrong
-  else:
-    fd.write(messageBack.encode())
-    fd.close()
+  try:
+    messageBack = server.processCommand(message, ret_addr)
     for users in server.users: #broadcast send
-      server.rdt.rdt_send('../server/tmpFile', users)
+      server.rdt.rdt_sendBytes(messageBack.encode(), users)
+  except RuntimeError as e:
+    server.rdt.rdt_sendBytes(str(e).encode(), ret_addr) #sending to just one client, that sent something wrong
 
 # validacao de comandos
 # server.processCommand('/hello thiago 127.0.0.1 6968')

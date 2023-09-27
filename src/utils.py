@@ -2,6 +2,7 @@ import socket as sck
 import random as rnd
 import datetime
 import copy
+import io
 
 class UDP:
 
@@ -43,53 +44,59 @@ class Rdt3:
     return rcvpkt[0] >= 2
 
   def rdt_send(self, file_name, addr):
+    with open(file_name, 'rb') as file:
+      self.rdt_sendBytes(file, addr)
+
+  def rdt_sendBytes(self, bytesToSend, addr):
+    # if we receive bytes we must transform it to a bufferedIOBytes, to use read method, if it's a file, no changes
+    bytesToSend = io.BytesIO(bytesToSend) if type(bytesToSend) == bytes else bytesToSend
+
     latest_packet = bytes()
     ret_count = 0
-    with open(file_name, 'rb') as file:
-      while True:
-        if self.stateSend == 0 or self.stateSend == 2:
-          #print('Transmissor state: ' + str(self.stateSend))
-          #create packet (if remaining data)
-          data = file.read(1023)
-          latest_packet = data
-          #send packet
-          id = 0 if self.stateSend == 0 else 1
-          #print('Enviando pacote ' + str(id))
+    while True:
+      if self.stateSend == 0 or self.stateSend == 2:
+        #print('Transmissor state: ' + str(self.stateSend))
+        #create packet (if remaining data)
+        data = bytesToSend.read(1023)
+        latest_packet = data
+        #send packet
+        id = 0 if self.stateSend == 0 else 1
+        #print('Enviando pacote ' + str(id))
 
-          self.udp.send_data(data, id, addr, eof=0 if len(data) else 1)
-          #start timer
-          self.udp.start_timer(self.TIMEOUT_INTERVAL)
-          self.stateSend += 1
-          ret_count = 0
+        self.udp.send_data(data, id, addr, eof=0 if len(data) else 1)
+        #start timer
+        self.udp.start_timer(self.TIMEOUT_INTERVAL)
+        self.stateSend += 1
+        ret_count = 0
 
-        else:
-          #if timeout, send again and restart timer
-          id = 0 if self.stateSend == 1 else 1
-          #if received ack, but not the one expected, ignore
-          #print('Transmissor state: ' + str(self.stateSend))
-          try:
-            #espera o ack
-            recvpkt, ret_addr = self.udp.recv_data()
-            if self.isId(recvpkt, id):
-              #print('ACK ' + str(id) + ' recebido')
-              self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
-              if not len(latest_packet):  #end of file
-                self.udp.start_timer(None)
-                break
-          except sck.timeout:
-            #envia o pacote de novo
-            if ret_count > 5:  #ultimo ack perdido
-              #print('Muitas retransmissoes, encerrando conexao!')
+      else:
+        #if timeout, send again and restart timer
+        id = 0 if self.stateSend == 1 else 1
+        #if received ack, but not the one expected, ignore
+        #print('Transmissor state: ' + str(self.stateSend))
+        try:
+          #espera o ack
+          recvpkt, ret_addr = self.udp.recv_data()
+          if self.isId(recvpkt, id):
+            #print('ACK ' + str(id) + ' recebido')
+            self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
+            if not len(latest_packet):  #end of file
               self.udp.start_timer(None)
               break
-            self.udp.send_data(latest_packet,
-                               id,
-                               addr,
-                               eof=0 if len(latest_packet) else 1)
-            #print('Temporizador estorou!\nRetransmitindo ' + str(id))
-            self.udp.start_timer(self.TIMEOUT_INTERVAL)
-            ret_count += 1
-          #if received ack, and is the one expected, stop timer and go to stateSend 2
+        except sck.timeout:
+          #envia o pacote de novo
+          if ret_count > 5:  #ultimo ack perdido
+            #print('Muitas retransmissoes, encerrando conexao!')
+            self.udp.start_timer(None)
+            break
+          self.udp.send_data(latest_packet,
+                              id,
+                              addr,
+                              eof=0 if len(latest_packet) else 1)
+          #print('Temporizador estorou!\nRetransmitindo ' + str(id))
+          self.udp.start_timer(self.TIMEOUT_INTERVAL)
+          ret_count += 1
+        #if received ack, and is the one expected, stop timer and go to stateSend 2
 
   def rdt_recv(self, destination, waitTime = None):
     WAIT0 = 0
