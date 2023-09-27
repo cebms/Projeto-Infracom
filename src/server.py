@@ -5,7 +5,9 @@ from utils import Message
 import socket as sck
 import time
 import copy
+import random
 
+greetings = ['A wild {} {} {} appeared!', 'Welcome {} {} {}!', '{} {} {} jumped into the chat']
 
 class Server:
 
@@ -13,8 +15,8 @@ class Server:
     self.IP = IP
     self.port = port
     self.rdt = Rdt3((self.IP, self.port))
-    self.users = []
     self.messages = []
+    self.users = {}
     self.commands = {
         "/hello": self.connectUser,
         "/bye": self.disconnectUser,
@@ -27,110 +29,87 @@ class Server:
     for message in self.messages:
       message.show()
 
-  def listUsers(self, _):
+  def listUsers(self, *args):
     usernamesList = []
-    for user in self.users:
-      usernamesList.append(user.name)
+    for user in self.users.values():
+      print(user)
+      usernamesList.append(user)
 
-    print(usernamesList)
     return usernamesList
 
   def disconnectUser(self, *args):
-    params = args[0]
-    #params = [name]
-    usersCopy = self.users[:]
-    for userCopy in usersCopy:
-      if params[0] == userCopy.name:
-        self.users.remove(userCopy)
-        print("User " + params[0] + " Disconected!")
-        return True
+    userAddr = args[0]
 
-    print("User " + params[0] + " not found!")
-    return False
+    if userAddr in self.users:
+      name = self.users[userAddr]
+      print('User ' + name + ' disconnected')
+      message = '{} {} {} disconected.'.format(userAddr[0], userAddr[1], name)
+
+      ### sending the end of conection to the one who requested it
+      with open('../server/tmpFile', 'w+b') as fd:
+        fd.write(message.encode())
+      self.rdt.rdt_send('../server/tmpFile', userAddr)
+
+      self.users.pop(userAddr)
+      return message
+    else:
+      print('User was not logged in')
+      return None
 
   def connectUser(self, *args):
-    params = args[0]
-    #params = [name, ip, port]
-    contains = False
-    for user in self.users:
-      if (user.name == params[0]):
-        contains = True
-        break
-    if not contains:
-      newUser = User(name=params[0], IP=params[1], port=params[2])
-      self.users.append(newUser)
-      print("User " + params[0] + " logged in!")
-      return True
-    else:
-      print("User " + params[0] + " Already Logged!")
-      return False
+    name = args[0][0]
+    userAddr = args[1]
 
-  def banUser(self, **kwargs):
+    if userAddr in self.users.keys():
+      print("User " + name + " Already Logged!")
+      return None
+    else:
+      if name not in self.users.values():
+        print("User " + name + " logged in!")
+        self.users[userAddr] = name
+        return random.sample(greetings, 1)[0].format(userAddr[0], userAddr[1], name)
+      else:
+        print('Someone already has this name')
+        return None
+
+  def banUser(self, *args):
     pass
 
 # considerando que temos nome-IP-porta-mensagem (nessa ordem e separdo por espacos)
 
   def getMessage(self, *args):
-    params = args[0]
 
-    text = params
-    name = ''
-    IP = ''
-    port = 0
-    i = 0
+    message = args[0]
+    userAddr = args[1]
 
-    # Get Name
-    while i < len(text) and text[i] != '-':
-      name = name + text[i]
-      i = i + 1
-
-    if i < len(text):
-      i = i + 1  # Move past the '-'
+    if userAddr in self.users:
+      # create objcts and append to others
+      name = self.users[userAddr]
+      newMessage = Message(User(name, userAddr[0], userAddr[1]), message)
+      self.messages.append(newMessage)
+      print('message received from ' + name + ': ' + message)
+      return '{} {} {}: {}'.format(userAddr[0], userAddr[1], name, message)
     else:
-      print("Wrong message format!")
-      return False
+      print('Someone that is not logged in sent a message')
+      return None
 
-    # Get IP
-    while i < len(text) and text[i] != '-':
-      IP = IP + text[i]
-      i = i + 1
-
-    if i < len(text):
-      i = i + 1  # Move past the '-'
-    else:
-      print("Wrong message format!")
-      return False
-
-    # Get Port
-    while i < len(text) and text[i] != '-':
-      port = port * 10 + int(text[i])
-      i = i + 1
-
-    if i < len(text):
-      i = i + 1  # Move past the '-'
-    else:
-      print("Wrong message format!")
-      return False
-
-    message = text[i:]
-
-    # create objcts and append to others
-    newMessage = Message(User(name, IP, port), message)
-    self.messages.append(newMessage)
-    print('message received from ' + name + '!')
-    return True
-
-  def runCommand(self, command, args):
+  def runCommand(self, command, text, retAddr):
+    if command not in self.commands:
+      print('Command does not exist')
+      # return self.getMessage(text, retAddr) #if dont exist, it's a message!
+      return None
     method = self.commands[command]
-    return method(args)
+    return method(text, retAddr)
 
-  def processCommand(self, command):
+  def processCommand(self, command, retAddr):
     if command[0] != '/':
-      self.runCommand("message", command)
+      return self.runCommand("message", command, retAddr)
     else:
       words = command.split()
-      self.runCommand(words[0], words[1:])
-
+      if words[0] == '/bye':
+        return self.disconnectUser(retAddr)
+      else:
+        return self.runCommand(words[0], words[1:], retAddr)
 
 # instanciacao do server
 server = Server('127.0.0.1', 6969)
@@ -145,11 +124,20 @@ while True:
     ret_addr = server.rdt.rdt_recv(fd)
     fd.seek(0)
     message = fd.read().decode()
-    print(message)
-    server.processCommand(message)
+    #print(message)
+  messageBack = server.processCommand(message, ret_addr)
 
   #sending back the message to client
-  server.rdt.rdt_send('../server/tmpFile', ret_addr)
+  fd = open('../server/tmpFile', 'wb')
+  if messageBack == None:
+    fd.write('Bad Request, try again'.encode())
+    fd.close()
+    server.rdt.rdt_send('../server/tmpFile', ret_addr) #sending to just one client, that sent somthing wrong
+  else:
+    fd.write(messageBack.encode())
+    fd.close()
+    for users in server.users: #broadcast send
+      server.rdt.rdt_send('../server/tmpFile', users)
 
 # validacao de comandos
 # server.processCommand('/hello thiago 127.0.0.1 6968')

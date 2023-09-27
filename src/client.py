@@ -67,8 +67,11 @@ class Client:
           self.rdt.rdt_recv(fd, 1)
           #
           # Received messages from server: Do something here.
-          # fd.seek(0) # to go back to the begin of the file
-          # print('received: ' + fd.read().decode())
+          fd.seek(0) # to go back to the begin of the file
+          print('\033[2K' + '\033[2D', end='')
+          print(fd.read().decode())
+          print('$ ', end='')
+          sys.stdout.flush()
           #
           self.lock.release()
       except:
@@ -76,11 +79,14 @@ class Client:
 
   def run(self):
     # Get user input from the keyboard
-    user_input = input("$ ")
+    user_input = input()
+    print('\033[1A' + '\033[2K', end='')
+    print('Waiting for server...')
+    print('\033[1A' + '\033[2D', end='')
     self.processCommand(user_input)
 
 
 client = Client()
-
+print('$ ', end='')
 while True:
   client.run()
