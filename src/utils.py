@@ -160,6 +160,10 @@ class Message:
     print(self.user.IP + ':' + str(self.user.port) + '/~' + self.user.name +
           ': ' + self.text + ' ' + self.time)
 
+  def getString(self):
+    return (self.user.IP + ':' + str(self.user.port) + '/~' + self.user.name +
+          ': ' + self.text + ' ' + self.time)
+
 
 # Para printar a messagem em vermelho
 def print_vermelho(texto):
