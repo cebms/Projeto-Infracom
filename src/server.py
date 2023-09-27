@@ -28,13 +28,10 @@ class Server:
 
   def listUsers(self, *args):
     usernamesList = ''
-    for user in self.users.values():
-      print(user)
-      usernamesList += user + '\n'
-
+    usernamesList = ",".join(self.users.values())
     #sending as runtimeError to send exclusivelly to the person who typed the command
     #fix it.
-    raise RuntimeError("#0 " + usernamesList)
+    raise RuntimeError("#4 " + usernamesList)
 
   def disconnectUser(self, *args):
     userAddr = args[0]

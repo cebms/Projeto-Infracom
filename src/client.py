@@ -8,6 +8,7 @@ class Client:
     self.SERVER_IP = '127.0.0.1'
     self.SERVER_PORT = 6969
     self.friends = []
+    self.logged_users = []
     self.commands = {
       "/addtomylist": self.addUser,
       "/rmvfrommylist": self.removeUser,
@@ -23,6 +24,11 @@ class Client:
   def addUser(self, *args):
     if(self.logged): #TODO verificar se o nome existe
         user_name = args[0][0]
+        if user_name in self.logged_users:
+            print("User " + user_name + " added to your list!")
+            self.friends.append(user_name)
+        else:
+            print("User not found. Try to refresh the list with /list")
     else:
         print("You should log in before send messages, try: /hello <your_name>")
   
@@ -45,6 +51,8 @@ class Client:
       method(commands[1:])
     else:
         self.sendMessage(text)
+        
+    print('$ ', end='')
 
   def recvFromServer(self):
     '''
@@ -60,6 +68,7 @@ class Client:
     #1 -> Not logged message
     #2 -> Login success
     #3 -> Command not found error
+    #4 -> Logged users list
     '''
     while True:
       try:
@@ -84,6 +93,8 @@ class Client:
       self.logged = False
     elif msg[1] == '2':
       self.logged = True
+    elif msg[1] == '4':
+      self.logged_users = msg[3:].split(',')
 
   def run(self):
     # Get user input from the keyboard
