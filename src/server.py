@@ -1,10 +1,10 @@
 from typing import TextIO
-from utils import Rdt3
-from utils import User
-from utils import Message
+from utils import *
 import random
 
-greetings = ['A wild {} {} {} appeared!', 'Welcome {} {} {}!', '{} {} {} jumped into the chat']
+greetings = ['A wild {}:{} {} appeared!', 'Welcome {}:{} {}!', '{}:{} {} jumped into the chat']
+
+# 127.0.0.1:50272/~thi: mensagem de teste! 13:49:10 28/09/2023
 
 class Server:
 
@@ -47,7 +47,7 @@ class Server:
     self.rdt.rdt_sendBytes(('#1 ' + message).encode(), userAddr)
 
     self.users.pop(userAddr)
-    return '#0 ' + message
+    return '#5 ' + message
 
   def connectUser(self, *args):
     if not args[0]:
@@ -63,7 +63,7 @@ class Server:
       if name not in self.users.values():
         print("User " + name + " logged in!")
         self.users[userAddr] = name
-        return "#2 " + random.sample(greetings, 1)[0].format(userAddr[0], userAddr[1], name)
+        return "#2 " + random.sample(greetings, 1)[0].format(green(userAddr[0]), green(str(userAddr[1])), blue(name))
       else:
         print('Someone already has this name')
         raise RuntimeError("#1 Someone is using this name, try another")
@@ -84,7 +84,7 @@ class Server:
         self.ban_threshold = len(self.users) // 2 + 1  # Mais da metade dos usuários conectados
         
         # Enviar uma mensagem para todos os usuários do chat informando a votação de banimento
-        ban_message = "#0 [Server] {} initiated a ban vote for user {}. Vote using /voteban <yes/no>.".format(self.users[userAddr], username_to_ban)
+        ban_message = "#5 [Server] {} initiated a ban vote for user {}. Vote using /voteban <yes/no>.".format(self.users[userAddr], username_to_ban)
         return ban_message
     else:
         raise RuntimeError("#1 User not found: {}".format(username_to_ban))
@@ -103,7 +103,7 @@ class Server:
             self.ban_votes[voter_name] = True
             # Enviar uma mensagem de voto para todos os usuários
             vote_count = sum(1 for vote in self.ban_votes.values() if vote)
-            vote_message = "#0 [Server] {} voted YES to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
+            vote_message = "#5 [Server] {} voted YES to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
             if vote_count >= self.ban_threshold:
               for (addr, name) in self.users.items():
                 if name == self.ban_target:
@@ -119,7 +119,7 @@ class Server:
             self.ban_votes[voter_name] = False
             # Enviar uma mensagem de voto para todos os usuários
             vote_count = sum(1 for vote in self.ban_votes.values() if vote)
-            vote_message = "#0 [Server] {} voted NO to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
+            vote_message = "#5 [Server] {} voted NO to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
             return vote_message
         else:
           raise RuntimeError("#1 You can't vote in our own ban.")
@@ -181,8 +181,19 @@ while True:
 
   try:
     messageBack = server.processCommand(message, ret_addr)
+    usersToKick = []
     for user in server.users: #broadcast send
-      server.rdt.rdt_sendBytes(messageBack.encode(), user)
+      if not server.rdt.rdt_sendBytes(messageBack.encode(), user):
+        usersToKick.append(user)
+
+    #Warning other users of users that fail to connect
+    for toKick in usersToKick:
+      for user in server.users:
+        if user in usersToKick:
+          continue
+        server.rdt.rdt_sendBytes('#5 {} {} {} disconected.'.format(toKick[0], toKick[1], server.users[toKick]).encode(), user)
+      server.users.pop(toKick)
+
   except RuntimeError as e:
     server.rdt.rdt_sendBytes(str(e).encode(), ret_addr) #sending to just one client, that sent something wrong
 

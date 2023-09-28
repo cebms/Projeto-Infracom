@@ -34,7 +34,7 @@ class Rdt3:
   def __init__(self, addr=None):
     self.stateSend = 0  #waiting for call 0
     self.stateRecv = 0
-    self.TIMEOUT_INTERVAL = 1  #time in seconds
+    self.TIMEOUT_INTERVAL = 0.5  #time in seconds
     self.udp = UDP(addr)
 
   def isId(self, rcvpkt, id):
@@ -52,6 +52,7 @@ class Rdt3:
     bytesToSend = io.BytesIO(bytesToSend) if type(bytesToSend) == bytes else bytesToSend
 
     latest_packet = bytes()
+    self.stateSend = 0
     ret_count = 0
     while True:
       if self.stateSend == 0 or self.stateSend == 2:
@@ -82,13 +83,13 @@ class Rdt3:
             self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
             if not len(latest_packet):  #end of file
               self.udp.start_timer(None)
-              break
+              return True
         except sck.timeout:
           #envia o pacote de novo
           if ret_count > 5:  #ultimo ack perdido
             #print('Muitas retransmissoes, encerrando conexao!')
             self.udp.start_timer(None)
-            break
+            return False
           self.udp.send_data(latest_packet,
                               id,
                               addr,
@@ -101,6 +102,7 @@ class Rdt3:
   def rdt_recv(self, destination, waitTime = None):
     WAIT0 = 0
     WAIT1 = 1
+    self.stateRecv = WAIT0
     while True:
       self.udp.start_timer(waitTime)
       rcvpkt, ret_addr = self.udp.recv_data()
@@ -129,7 +131,6 @@ class Rdt3:
       if self.isEOF(rcvpkt):
         return ret_addr
         break
-
 
 class User:
 
@@ -161,20 +162,26 @@ class Message:
           ': ' + self.text + ' ' + self.time)
 
   def getString(self):
-    return (self.user.IP + ':' + str(self.user.port) + '/~' + self.user.name +
-          ': ' + self.text + ' ' + self.time)
+    return (green(self.user.IP + ':' + str(self.user.port)+ '/')  + blue('~' + self.user.name) +
+          ': ' + self.text + ' ' + gray(self.time))
 
 
 # Para printar a messagem em vermelho
-def print_vermelho(texto):
-  print("\033[91m" + texto + "\033[0m")
-
+def red(texto):
+  return "\033[91m" + texto + "\033[0m"
 
 # Para printar a messagem em verde
-def print_verde(texto):
-  print("\033[92m" + texto + "\033[0m")
-
+def green(texto):
+  return "\033[92m" + texto + "\033[0m"
 
 # Para printar a messagem em amarelo
-def print_amarelo(texto):
-  print("\033[93m" + texto + "\033[0m")
+def yellow(texto):
+  return "\033[93m" + texto + "\033[0m"
+
+# To print the message in blue
+def blue(texto):
+  return "\033[94m" + texto + "\033[0m"
+
+# To print the message in gray
+def gray(texto):
+  return "\033[90m" + texto + "\033[0m"
