@@ -15,7 +15,7 @@ class Server:
     self.messages = []
     self.users = {}
     self.commands = {
-        "/hello": self.connectUser,
+        "/hi": self.connectUser,
         "/bye": self.disconnectUser,
         "/list": self.listUsers,
         "/ban": self.banUser,
@@ -142,12 +142,12 @@ class Server:
       return '#0 ' + newMessage.getString()
     else:
       print('Someone that is not logged in sent a message')
-      raise RuntimeError("#1 You should log in before send messages, try: /hello <your_name>")
+      raise RuntimeError("#1 You should log in before send messages, try: /hi <your_name>")
 
   def runCommand(self, command, text, retAddr):
     #if not logged you cannot execute a command
-    if retAddr not in self.users and command != '/hello':
-      raise RuntimeError("#1 You aren't logged-in, try login with: /hello <your_name>")
+    if retAddr not in self.users and command != '/hi':
+      raise RuntimeError("#1 You aren't logged-in, try login with: /hi <your_name>")
 
     #a command that does not exist
     elif command not in self.commands:

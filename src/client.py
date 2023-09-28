@@ -17,44 +17,92 @@ class Client:
 
     self.rdt = Rdt3()
 
-    self.lock = threading.RLock()
-    self.recvThread = threading.Thread(target=self.recvFromServer)
+    self.lock = threading.Lock()
+    self.recvThread = threading.Thread(target=self.recvThreadExecution)
+    self.recvThreadRun = True
     self.recvThread.start()
 
+  def printUserInput(self):
+    print('$ ', end='')
+    sys.stdout.flush()
+
+  def fetchLoggedList(self):
+    fd = open('../client/tmpToRecv', 'w+b')
+    try:
+      self.lock.acquire()
+      self.sendMessageWithoutLock('/list')
+      self.rdt.rdt_recv(fd, 5)
+      self.lock.release()
+    except:
+      if self.lock.locked():
+        self.lock.release()
+      fd.close()
+      print('Could not fetch logged list')
+      return
+
+    fd.seek(0)
+    message = fd.read().decode()
+    self.logged_users = message[3:].split(',')
+    fd.close()
+
   def addUser(self, *args):
+    self.fetchLoggedList()
+
     if(self.logged): #TODO verificar se o nome existe
         user_name = args[0][0]
         if user_name in self.logged_users:
             print("User " + user_name + " added to your list!")
+            self.printUserInput()
             self.friends.append(user_name)
         else:
-            print("User not found. Try to refresh the list with /list")
+            print('\033[2K', end='') #clean line
+            print("User not found.")
+            self.printUserInput()
     else:
-        print("You should log in before send messages, try: /hello <your_name>")
+        print("You should log in before send messages, try: /hi <your_name>")
   
   def removeUser(self, user):
     pass
   
   def listFriends(self):
+    self.fetchLoggedList()
+
+    if not self.friends:
+      print('You do not have friends, i am sorry...')
+      self.printUserInput()
+      return
+
+    print('\033[2K', end='') #clean line
+    print('Friends List:')
     for friend in self.friends:
-      print("-> ", friend)
+      print('(Online) ' if friend in self.logged_users else '(Offline) ', end='')
+      print(friend)
+    self.printUserInput()
+
+  def sendMessageWithoutLock(self, message):
+    self.rdt.rdt_sendBytes(message.encode(), (self.SERVER_IP, self.SERVER_PORT))
 
   def sendMessage(self, message):
     self.lock.acquire()
-    self.rdt.rdt_sendBytes(message.encode(), (self.SERVER_IP, self.SERVER_PORT))
+    self.sendMessageWithoutLock(message)
     self.lock.release()
 
   def processCommand(self, text):
     commands = text.split()
     if commands[0] in self.commands.keys():
       method = self.commands[commands[0]]
-      method(commands[1:])
+      if commands[0] == '/mylist':
+        method()
+      else:
+        method(commands[1:])
     else:
         self.sendMessage(text)
-        
-    print('$ ', end='')
 
-  def recvFromServer(self):
+
+  def recvThreadExecutionStop(self):
+    self.recvThreadRun = False
+
+  def recvThreadExecution(self):
     '''
     This the Receiver Thread main execution.
 
@@ -70,7 +118,7 @@ class Client:
     #3 -> Command not found error
     #4 -> Logged users list
     '''
-    while True:
+    while self.recvThreadRun:
       try:
         with open('../client/tmpToRecv', 'w+b') as fd:
           self.lock.acquire()
@@ -79,12 +127,11 @@ class Client:
           fd.seek(0) # to go back to the begin of the file
           print('\033[2K' + '\033[2D', end='')
           msg = fd.read().decode()
-          self.processIncomingMessage(msg)
           print(msg[3:])
-          print('$ ', end='')
-          sys.stdout.flush()
-          #
+          self.printUserInput()
           self.lock.release()
+
+          self.processIncomingMessage(msg)
       except:
         self.lock.release()
 
@@ -106,8 +153,7 @@ class Client:
     print('\033[1A' + '\033[2D', end='')
     self.processCommand(user_input)
 
-
 client = Client()
-print('$ ', end='')
+client.printUserInput()
 while True:
   client.run()
