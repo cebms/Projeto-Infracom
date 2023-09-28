@@ -4,8 +4,6 @@ import random
 
 greetings = ['A wild {}:{} {} appeared!', 'Welcome {}:{} {}!', '{}:{} {} jumped into the chat']
 
-# 127.0.0.1:50272/~thi: mensagem de teste! 13:49:10 28/09/2023
-
 class Server:
 
   def __init__(self, IP, port):
