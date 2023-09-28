@@ -19,8 +19,12 @@ class Server:
         "/bye": self.disconnectUser,
         "/list": self.listUsers,
         "/ban": self.banUser,
+        "/voteban": self.voteBan,
         "message": self.getMessage
     }
+    self.ban_votes = {}  # Dicionário para rastrear os votos de banimento
+    self.ban_threshold = 0  # Limiar necessário para banir um usuário
+    self.ban_target = None  # Usuário alvo para banimento
 
   def showMessages(self):
     for message in self.messages:
@@ -47,6 +51,9 @@ class Server:
     return message
 
   def connectUser(self, *args):
+    if not args[0]:
+        raise RuntimeError("#3 Usage: /hello <username>")
+
     name = args[0][0]
     userAddr = args[1]
 
@@ -63,7 +70,63 @@ class Server:
         raise RuntimeError("#1 Someone is using this name, try another")
 
   def banUser(self, *args):
-    pass
+    if not args[0]:
+        raise RuntimeError("#3 Usage: /ban <username>")
+    
+    userAddr = args[1]    
+    username_to_ban = args[0][0]
+    if username_to_ban in self.users.values():
+        if username_to_ban == self.ban_target:
+            raise RuntimeError("#1 You have already initiated a ban vote for this user.")
+        
+        self.ban_votes.clear()  # Limpar os votos anteriores
+        self.ban_votes[self.users[userAddr]] = True  # O usuário que iniciou a votação vota automaticamente
+        self.ban_target = username_to_ban
+        self.ban_threshold = len(self.users) // 2 + 1  # Mais da metade dos usuários conectados
+        
+        # Enviar uma mensagem para todos os usuários do chat informando a votação de banimento
+        ban_message = "#0 [Server] {} initiated a ban vote for user {}. Vote using /voteban <yes/no>.".format(self.users[userAddr], username_to_ban)
+        return ban_message
+    else:
+        raise RuntimeError("#1 User not found: {}".format(username_to_ban))
+
+  def voteBan(self, *args):
+    if not args[0] or (args[0][0] != "yes" and args[0][0] != "no"):
+      raise RuntimeError("#3 Usage: /voteban <yes/no>")
+    
+    total_users = len(self.users)
+    userAddr = args[1]
+    if self.ban_target:
+        voter_name = self.users[userAddr]
+        if voter_name != self.ban_target and args[0][0] == "yes":
+            if voter_name in self.ban_votes and self.ban_votes[voter_name] == True:
+              raise RuntimeError("#1 You already vote yes")
+            self.ban_votes[voter_name] = True
+            # Enviar uma mensagem de voto para todos os usuários
+            vote_count = sum(1 for vote in self.ban_votes.values() if vote)
+            vote_message = "#0 [Server] {} voted YES to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
+            if vote_count >= self.ban_threshold:
+              for (addr, name) in self.users.items():
+                if name == self.ban_target:
+                  self.disconnectUser(addr)
+                  vote_message += " User has been successfully banned!"
+                  self.ban_target = None
+                  break
+            return vote_message
+            
+        elif voter_name != self.ban_target and args[0][0] == "no":
+            if voter_name in self.ban_votes and self.ban_votes[voter_name] == False:
+              raise RuntimeError("#1 You already vote no")
+            self.ban_votes[voter_name] = False
+            # Enviar uma mensagem de voto para todos os usuários
+            vote_count = sum(1 for vote in self.ban_votes.values() if vote)
+            vote_message = "#0 [Server] {} voted NO to ban {}. {}/{} votes.".format(voter_name, self.ban_target, vote_count, total_users)
+            return vote_message
+        else:
+          raise RuntimeError("#1 You can't vote in our own ban.")
+    else:
+        raise RuntimeError("#1 No ban vote in progress.")
+   
 
   def getMessage(self, *args):
 
@@ -76,7 +139,7 @@ class Server:
       newMessage = Message(User(name, userAddr[0], userAddr[1]), message)
       self.messages.append(newMessage)
       print('message received from ' + name + ': ' + message)
-      return newMessage.getString()
+      return '#0 ' + newMessage.getString()
     else:
       print('Someone that is not logged in sent a message')
       raise RuntimeError("#1 You should log in before send messages, try: /hello <your_name>")
@@ -103,7 +166,7 @@ class Server:
       if words[0] == '/bye':
         return self.disconnectUser(retAddr)
       else:
-        return self.runCommand(words[0], words[1:], retAddr)
+        return self.runCommand(words[0], words[1:] if len(words) > 1 else None, retAddr)
 
 # instanciacao do server
 server = Server('127.0.0.1', 6969)
