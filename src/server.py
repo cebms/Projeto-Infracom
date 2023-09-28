@@ -43,12 +43,11 @@ class Server:
     name = self.users[userAddr]
     print('User ' + name + ' disconnected')
     message = '{} {} {} disconected.'.format(userAddr[0], userAddr[1], name)
-    message = "#1 " + message
     ### sending the end of conection to the one who requested it
-    self.rdt.rdt_sendBytes(message.encode(), userAddr)
+    self.rdt.rdt_sendBytes(('#1 ' + message).encode(), userAddr)
 
     self.users.pop(userAddr)
-    return message
+    return '#0 ' + message
 
   def connectUser(self, *args):
     if not args[0]:
@@ -182,8 +181,8 @@ while True:
 
   try:
     messageBack = server.processCommand(message, ret_addr)
-    for users in server.users: #broadcast send
-      server.rdt.rdt_sendBytes(messageBack.encode(), users)
+    for user in server.users: #broadcast send
+      server.rdt.rdt_sendBytes(messageBack.encode(), user)
   except RuntimeError as e:
     server.rdt.rdt_sendBytes(str(e).encode(), ret_addr) #sending to just one client, that sent something wrong
 

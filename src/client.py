@@ -52,18 +52,30 @@ class Client:
         user_name = args[0][0]
         if user_name in self.logged_users:
             print("User " + user_name + " added to your list!")
-            self.printUserInput()
             self.friends.append(user_name)
         else:
             print('\033[2K', end='') #clean line
             print("User not found.")
-            self.printUserInput()
     else:
         print("You should log in before send messages, try: /hi <your_name>")
+
+    self.printUserInput()
   
-  def removeUser(self, user):
-    pass
-  
+  def removeUser(self, *args):
+    friendToRemove = args[0][0]
+
+    if self.logged:
+      if friendToRemove in self.friends:
+        self.friends.remove(friendToRemove)
+        print('{} removed succesfully!'.format(friendToRemove))
+      else:
+        print('\033[2K', end='') #clean line
+        print('Friend not found')
+    else:
+        print("You should log in before send messages, try: /hi <your_name>")
+
+    self.printUserInput()
+
   def listFriends(self):
     self.fetchLoggedList()
 
@@ -94,7 +106,10 @@ class Client:
       if commands[0] == '/mylist':
         method()
       else:
-        method(commands[1:])
+        if not commands[1:]:
+          print('Missing command arguments')
+        else:
+          method(commands[1:])
     else:
         self.sendMessage(text)
 
