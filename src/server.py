@@ -12,6 +12,7 @@ class Server:
     self.rdt = Rdt3((self.IP, self.port))
     self.messages = []
     self.users = {}
+    self.bannedUsers = []
     self.commands = {
         "/hi": self.connectUser,
         "/bye": self.disconnectUser,
@@ -52,6 +53,8 @@ class Server:
         raise RuntimeError("#3 Usage: /hello <username>")
 
     name = args[0][0]
+    if name in self.bannedUsers:
+      raise RuntimeError('#5 You got banned bro wtf LMAO')
     userAddr = args[1]
 
     if userAddr in self.users.keys():
@@ -106,6 +109,7 @@ class Server:
               for (addr, name) in self.users.items():
                 if name == self.ban_target:
                   self.disconnectUser(addr)
+                  self.bannedUsers.append(name)
                   vote_message += " User has been successfully banned!"
                   self.ban_target = None
                   break
