@@ -15,7 +15,7 @@ class Server:
     self.messages = []
     self.users = {}
     self.commands = {
-        "/hello": self.connectUser,
+        "/hi": self.connectUser,
         "/bye": self.disconnectUser,
         "/list": self.listUsers,
         "/ban": self.banUser,
@@ -34,7 +34,7 @@ class Server:
     raise RuntimeError("#4 " + usernamesList)
 
   def disconnectUser(self, *args):
-    userAddr = args[0]
+    userAddr = args[1]
 
     name = self.users[userAddr]
     print('User ' + name + ' disconnected')
@@ -76,15 +76,15 @@ class Server:
       newMessage = Message(User(name, userAddr[0], userAddr[1]), message)
       self.messages.append(newMessage)
       print('message received from ' + name + ': ' + message)
-      return newMessage.getString()
+      return '#0 ' + newMessage.getString()
     else:
       print('Someone that is not logged in sent a message')
-      raise RuntimeError("#1 You should log in before send messages, try: /hello <your_name>")
+      raise RuntimeError("#1 You should log in before send messages, try: /hi <your_name>")
 
   def runCommand(self, command, text, retAddr):
     #if not logged you cannot execute a command
-    if retAddr not in self.users and command != '/hello':
-      raise RuntimeError("#1 You aren't logged-in, try login with: /hello <your_name>")
+    if retAddr not in self.users and command != '/hi':
+      raise RuntimeError("#1 You aren't logged-in, try login with: /hi <your_name>")
 
     #a command that does not exist
     elif command not in self.commands:
@@ -100,10 +100,7 @@ class Server:
       return self.runCommand("message", command, retAddr)
     else:
       words = command.split()
-      if words[0] == '/bye':
-        return self.disconnectUser(retAddr)
-      else:
-        return self.runCommand(words[0], words[1:], retAddr)
+      return self.runCommand(words[0], words[1:] if len(words) > 1 else None, retAddr)
 
 # instanciacao do server
 server = Server('127.0.0.1', 6969)
