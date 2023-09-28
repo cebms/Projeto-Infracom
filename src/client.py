@@ -1,6 +1,7 @@
 from utils import *
 import sys
 import threading
+import re
 
 class Client:
 
@@ -10,9 +11,9 @@ class Client:
     self.friends = []
     self.logged_users = []
     self.commands = {
-      "/addtomylist": self.addUser,
-      "/rmvfrommylist": self.removeUser,
-      "/mylist": self.listFriends
+      "/add": self.addUser, #addtomylist
+      "/rmv": self.removeUser, #rmvfrommylist 
+      "/ml": self.listFriends #mylist
     }
 
     self.rdt = Rdt3()
@@ -103,7 +104,7 @@ class Client:
     commands = text.split()
     if commands[0] in self.commands.keys():
       method = self.commands[commands[0]]
-      if commands[0] == '/mylist':
+      if commands[0] == '/ml':
         method()
       else:
         if not commands[1:]:
@@ -127,11 +128,12 @@ class Client:
     what cannot happen because the client may want to send something to Server.
     '''
     '''
-    #0 -> Normal message
+    #0 -> Normal (chat) message
     #1 -> Not logged message
     #2 -> Login success
     #3 -> Command not found error
     #4 -> Logged users list
+    #5 -> Info Message
     '''
     while self.recvThreadRun:
       try:
@@ -142,11 +144,11 @@ class Client:
           fd.seek(0) # to go back to the begin of the file
           print('\033[2K' + '\033[2D', end='')
           msg = fd.read().decode()
+          msg = self.processIncomingMessage(msg)
           print(msg[3:])
           self.printUserInput()
           self.lock.release()
 
-          self.processIncomingMessage(msg)
       except:
         self.lock.release()
 
@@ -157,6 +159,14 @@ class Client:
       self.logged = True
     elif msg[1] == '4':
       self.logged_users = msg[3:].split(',')
+    elif msg[1] == '0':
+      pattern = r'~(.*?):'
+      correspondences = re.findall(pattern, msg)
+      user_name = correspondences[0]
+      if user_name[:-4] in self.friends:
+        msg = msg[:3] + yellow('[Friend] ') + msg[3:]
+        
+    return msg
 
   def run(self):
     # Get user input from the keyboard

@@ -130,7 +130,6 @@ class Rdt3:
         return ret_addr
         break
 
-
 class User:
 
   def __init__(self, name, IP, port):
@@ -161,20 +160,26 @@ class Message:
           ': ' + self.text + ' ' + self.time)
 
   def getString(self):
-    return (self.user.IP + ':' + str(self.user.port) + '/~' + self.user.name +
-          ': ' + self.text + ' ' + self.time)
+    return (green(self.user.IP + ':' + str(self.user.port)+ '/')  + blue('~' + self.user.name) +
+          ': ' + self.text + ' ' + gray(self.time))
 
 
 # Para printar a messagem em vermelho
-def print_vermelho(texto):
-  print("\033[91m" + texto + "\033[0m")
-
+def red(texto):
+  return "\033[91m" + texto + "\033[0m"
 
 # Para printar a messagem em verde
-def print_verde(texto):
-  print("\033[92m" + texto + "\033[0m")
-
+def green(texto):
+  return "\033[92m" + texto + "\033[0m"
 
 # Para printar a messagem em amarelo
-def print_amarelo(texto):
-  print("\033[93m" + texto + "\033[0m")
+def yellow(texto):
+  return "\033[93m" + texto + "\033[0m"
+
+# To print the message in blue
+def blue(texto):
+  return "\033[94m" + texto + "\033[0m"
+
+# To print the message in gray
+def gray(texto):
+  return "\033[90m" + texto + "\033[0m"
