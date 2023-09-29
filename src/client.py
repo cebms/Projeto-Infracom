@@ -1,7 +1,8 @@
 from utils import *
 import sys
-import threading
+import threading, tty, termios
 import re
+import time
 
 class Client:
 
@@ -15,6 +16,7 @@ class Client:
       "/rmv": self.removeUser, #rmvfrommylist 
       "/ml": self.listFriends #mylist
     }
+    self.writed = ''
 
     self.rdt = Rdt3()
 
@@ -24,7 +26,7 @@ class Client:
     self.recvThread.start()
 
   def printUserInput(self):
-    print('$ ', end='')
+    print('\r$ ' + self.writed, end='')
     sys.stdout.flush()
 
   def fetchLoggedList(self):
@@ -168,17 +170,47 @@ class Client:
         
     return msg
 
+  def read_input(self):
+    fd = sys.stdin.fileno()
+    ch = 0
+    while True:
+      try:
+          old_settings = termios.tcgetattr(fd)
+          tty.setraw(sys.stdin.fileno())
+          ch = sys.stdin.read(1)
+      finally:
+          termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+          if ord(ch) == 13:
+            print('')
+            ret = self.writed
+            self.writed = ''
+            return ret
+          elif ord(ch) == 127:  #delete a char
+            if self.writed: #only delete if has chars to delete
+              print('\033[1D \033[1D', end='')
+              sys.stdout.flush()
+              self.writed = self.writed[:-1]
+          else:
+            self.writed += ch
+            print(ch, end='')
+            sys.stdout.flush()
+
   def run(self):
     # Get user input from the keyboard
-    user_input = input()
+    user_input = self.read_input()
     if len(user_input) == 0:
       return True
+    if user_input == '/q':
+      return False
     print('\033[1A' + '\033[2K', end='')
     print('Waiting for server...')
     print('\033[1A' + '\033[2D', end='')
     self.processCommand(user_input)
+    return True
 
 client = Client()
 client.printUserInput()
-while True:
-  client.run()
+while client.run():
+  None
+
+client.recvThreadExecutionStop()

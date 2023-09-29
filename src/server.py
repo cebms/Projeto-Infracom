@@ -50,7 +50,7 @@ class Server:
 
   def connectUser(self, *args):
     if not args[0]:
-        raise RuntimeError("#3 Usage: /hello <username>")
+        raise RuntimeError("#3 Usage: /hi <username>")
 
     name = args[0][0]
     if name in self.bannedUsers:
