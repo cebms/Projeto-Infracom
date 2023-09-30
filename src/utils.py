@@ -28,13 +28,15 @@ class UDP:
   def start_timer(self, time):
     self.socks.settimeout(time)
 
+  def stop_timer(self):
+    self.socks.settimeout(None)
 
 class Rdt3:
 
   def __init__(self, addr=None):
     self.stateSend = 0  #waiting for call 0
     self.stateRecv = 0
-    self.TIMEOUT_INTERVAL = 0.5  #time in seconds
+    self.TIMEOUT_INTERVAL = 1  #time in seconds
     self.udp = UDP(addr)
 
   def isId(self, rcvpkt, id):
@@ -82,13 +84,13 @@ class Rdt3:
             #print('ACK ' + str(id) + ' recebido')
             self.stateSend = (self.stateSend + 1) % 4  # 1 -> 2, 3 -> 0
             if not len(latest_packet):  #end of file
-              self.udp.start_timer(None)
+              self.udp.stop_timer()
               return True
         except sck.timeout:
           #envia o pacote de novo
           if ret_count > 5:  #ultimo ack perdido
             #print('Muitas retransmissoes, encerrando conexao!')
-            self.udp.start_timer(None)
+            self.udp.stop_timer()
             return False
           self.udp.send_data(latest_packet,
                               id,
@@ -129,6 +131,7 @@ class Rdt3:
           #print('ACK 0 enviado')
 
       if self.isEOF(rcvpkt):
+        self.udp.stop_timer()
         return ret_addr
         break
 

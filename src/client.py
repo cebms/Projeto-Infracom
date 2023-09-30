@@ -41,15 +41,17 @@ class Client:
         self.lock.release()
       fd.close()
       print('Could not fetch logged list')
-      return
+      return False
 
     fd.seek(0)
     message = fd.read().decode()
     self.logged_users = message[3:].split(',')
     fd.close()
+    return True
 
   def addUser(self, *args):
-    self.fetchLoggedList()
+    if not self.fetchLoggedList():
+      return False
 
     if(self.logged): #TODO verificar se o nome existe
         user_name = args[0][0]
@@ -63,6 +65,7 @@ class Client:
         print("You should log in before send messages, try: /hi <your_name>")
 
     self.printUserInput()
+    return True
   
   def removeUser(self, *args):
     friendToRemove = args[0][0]
@@ -78,14 +81,16 @@ class Client:
         print("You should log in before send messages, try: /hi <your_name>")
 
     self.printUserInput()
+    return True
 
   def listFriends(self):
-    self.fetchLoggedList()
+    if not self.fetchLoggedList():
+      return False
 
     if not self.friends:
       print('You do not have friends, i am sorry...')
       self.printUserInput()
-      return
+      return True
 
     print('\033[2K', end='') #clean line
     print(blue('Friends List:'))
@@ -93,28 +98,30 @@ class Client:
       print(green('(Online) ') if friend in self.logged_users else red('(Offline) '), end='')
       print(friend)
     self.printUserInput()
+    return True
 
   def sendMessageWithoutLock(self, message):
-    self.rdt.rdt_sendBytes(message.encode(), (self.SERVER_IP, self.SERVER_PORT))
+    return self.rdt.rdt_sendBytes(message.encode(), (self.SERVER_IP, self.SERVER_PORT))
 
   def sendMessage(self, message):
     self.lock.acquire()
-    self.sendMessageWithoutLock(message)
+    status = self.sendMessageWithoutLock(message)
     self.lock.release()
+    return status
 
   def processCommand(self, text):
     commands = text.split()
     if commands[0] in self.commands.keys():
       method = self.commands[commands[0]]
       if commands[0] == '/ml':
-        method()
+        return method()
       else:
         if not commands[1:]:
           print('Missing command arguments')
         else:
-          method(commands[1:])
+          return method(commands[1:])
     else:
-        self.sendMessage(text)
+        return self.sendMessage(text)
 
 
   def recvThreadExecutionStop(self):
@@ -138,21 +145,23 @@ class Client:
     #5 -> Info Message
     '''
     while self.recvThreadRun:
+      fd = open('../client/tmpToRecv', 'w+b')
       try:
-        with open('../client/tmpToRecv', 'w+b') as fd:
-          self.lock.acquire()
-          self.rdt.rdt_recv(fd, 1)
-          # Received messages from server: Do something here.
-          fd.seek(0) # to go back to the begin of the file
-          print('\033[2K' + '\r', end='')
-          msg = fd.read().decode()
-          msg = self.processIncomingMessage(msg)
-          print(msg[3:])
-          self.printUserInput()
-          self.lock.release()
-
-      except:
+        self.lock.acquire()
+        self.rdt.rdt_recv(fd, 1)
         self.lock.release()
+          # Received messages from server: Do something here.
+      except:
+        if self.lock.locked():
+          self.lock.release()
+      fd.seek(0) # to go back to the begin of the file
+      msg = fd.read().decode()
+      if not msg:
+        continue
+      msg = self.processIncomingMessage(msg)
+      print('\r\033[2K', end='')
+      print(msg[3:])
+      self.printUserInput()
 
   def processIncomingMessage(self, msg):
     if msg[1] == '1':
@@ -205,7 +214,10 @@ class Client:
     print('\033[1A' + '\033[2K', end='')
     print('Waiting for server...')
     print('\033[1A' + '\033[2D', end='')
-    self.processCommand(user_input)
+    if not self.processCommand(user_input):
+      print('\r\033[2K', end='')
+      print('Connection Failed')
+      self.printUserInput()
     return True
 
 client = Client()

@@ -187,6 +187,8 @@ while True:
     for user in server.users: #broadcast send
       if not server.rdt.rdt_sendBytes(messageBack.encode(), user):
         usersToKick.append(user)
+      else:
+        print('send to %s' % server.users[user])
 
     #Warning other users of users that fail to connect
     for toKick in usersToKick:
