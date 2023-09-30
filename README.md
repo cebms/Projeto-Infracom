@@ -29,6 +29,7 @@ Projeto da disciplina de Infraestrutura de Comunicação, que consiste em um cha
 | ```/add <user_name>``` | Adiciona ```<user_name>``` na lista de amigos  |
 | ```/rmv <user_name>``` | Remove ```<user_name>``` da lista de amigos |
 | ```/ban <user_name>``` | Inicia uma votação para banir ```<user_name>``` |
+| ```/q ``` | Encerra o Chat do cliente |
 
 ## Funcionamento do Servidor
 
